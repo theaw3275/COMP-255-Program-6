@@ -8,6 +8,9 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # Load the CSV file (all rows are treated as data)
 data = pd.read_csv("tokenizer-table.csv", header=None)
@@ -49,7 +52,7 @@ df_texts[['Author', 'Title']] = df_texts['ID'].apply(parse_id)
 #print(df_texts.head())
 #print(df_texts.tail())
 
-
+"""Clustering the documents using K-Means"""
 # create array of features, except the initial (class) column
 features = df_texts.columns
 features = features[1:-2] # remove ID, Author, Title
@@ -88,7 +91,7 @@ n_clusters = len(uniqueClasses)
 print("Number of clusters set to:", n_clusters)
 
 # Run K-means on the scaled feature matrix
-kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+kmeans = KMeans(n_clusters=n_clusters)
 clusters = kmeans.fit_predict(X_scaled)
 
 # Create a temporary DataFrame to view the clusters with actual authors.
@@ -123,4 +126,40 @@ for cluster, color in zip(sorted(cluster_to_author.keys()), colors):
 
 # Add the legend to the plot.
 plt.legend(handles=handles, loc='best')
-plt.show()
+#plt.show()
+
+"""SVM"""
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.2, stratify=y
+)
+print(f"Training set shape: {X_train.shape}, Testing set shape: {X_test.shape}")
+
+# put y in the right format
+y_train = np.array(y_train).flatten()
+
+# Create and train the SVM classifier
+clf = SVC(kernel='linear', C=1, class_weight='balanced')
+clf.fit(X_train, y_train)
+
+unique_train, counts_train = np.unique(y_train, return_counts=True)
+print("Training set distribution:")
+for label, count in zip(unique_train, counts_train):
+    print(f"Class {label}: {count}")
+
+# Predict on the test set
+y_pred = clf.predict(X_test)
+
+# Compute accuracy (rounded to 2 decimal places)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"SVM Classification Accuracy on test set: {accuracy:.2f}")
+
+# Print a full classification report (precision, recall, f1-score)
+print("Classification Report:")
+print(classification_report(y_test, y_pred, target_names=uniqueClasses))
+
+# Optionally, create and display a confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=uniqueClasses)
+cm_df = pd.DataFrame(cm, index=uniqueClasses, columns=uniqueClasses)
+print("Confusion Matrix (Rows: Actual, Columns: Predicted):")
+print(cm_df)
