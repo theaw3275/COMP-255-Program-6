@@ -1,4 +1,14 @@
-# main
+# Thea West
+# Program 6
+# May 3, 2025
+# Clustering and Classifying Jane Austen and GPT4o
+# This script reads a CSV file containing tokenized text data, performs clustering using K-Means,
+# and classifies the documents using SVM. It also visualizes the clusters using PCA.
+# The script assumes that the CSV file is structured with the first row containing token names,
+# and the first column containing document IDs. The script also includes functions to parse the
+# document IDs into author and title, and to standardize the token frequencies across documents.
+# Much of the code is adapted from my work on Program 5, and I used ChatGPT 4o mini-high for help
+# with error messages and some of the code.
 
 # imports
 import pandas as pd
@@ -34,7 +44,7 @@ df_texts.columns = headers
 # Define a function to split the document ID (e.g., "FED_18_C") into paper number and author code.
 def parse_id(doc_id):
     # Split the string using '_' as the delimiter
-    parts = doc_id.split('_')  # Expected output: ['JA', 'prideandprejudice']
+    parts = doc_id.split('_')  # Expected output example: ['JA', 'prideandprejudice']
     # Check and extract the paper number and author code
     if len(parts) == 2:
         author = parts[0]
@@ -59,7 +69,9 @@ features = features[1:-2] # remove ID, Author, Title
 
 # create dataframe of features (X) and classes (y)
 X = df_texts[features].values
-# ——— Fix #1: Standardize each token’s frequency across documents ———
+# Standardize each token’s frequency across documents
+# this helps to eliminate the issues caused by varying document lengths
+# and to ensure that each token contributes equally to the clustering process
 scaler   = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 y = df_texts['Author'].values
@@ -84,7 +96,7 @@ pca = PCA(n_components=2)
 X_pca = pca.fit_transform(X_scaled)
 
 # Optional: view the amount of variance explained by the principal components
-print("Explained variance ratio:", pca.explained_variance_ratio_)
+#print("Explained variance ratio:", pca.explained_variance_ratio_)
 
 # Determine the number of unique known authors
 n_clusters = len(uniqueClasses)
@@ -126,7 +138,13 @@ for cluster, color in zip(sorted(cluster_to_author.keys()), colors):
 
 # Add the legend to the plot.
 plt.legend(handles=handles, loc='best')
-#plt.show()
+plt.show()
+
+# The cluster analysis is very promising. All the Jane Austen novels are in 
+# one tight cluster on the right of the graph, and the GPT4o texts are at the 
+# far left, albeit scattered vertically. This suggests that the GPT4o texts
+# are measurably different from the Jane Austen texts and we will likely be
+# able to classify them with a SVM.
 
 """SVM"""
 
@@ -158,7 +176,7 @@ print(f"SVM Classification Accuracy on test set: {accuracy:.2f}")
 print("Classification Report:")
 print(classification_report(y_test, y_pred, target_names=uniqueClasses))
 
-# Optionally, create and display a confusion matrix
+# Create and display a confusion matrix
 cm = confusion_matrix(y_test, y_pred, labels=uniqueClasses)
 cm_df = pd.DataFrame(cm, index=uniqueClasses, columns=uniqueClasses)
 print("Confusion Matrix (Rows: Actual, Columns: Predicted):")
